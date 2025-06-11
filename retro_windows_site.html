@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 96 Interactive Desktop</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=MS+Gothic&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'MS Gothic', 'Courier New', monospace;
+            background: linear-gradient(45deg, #008080, #000080);
+            color: #000;
+            overflow: hidden;
+            height: 100vh;
+            user-select: none;
+        }
+        
+        .desktop {
+            height: 100vh;
+            background: #008080;
+            background-image: 
+                radial-gradient(circle at 25% 25%, #00a0a0 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, #006060 0%, transparent 50%);
+            position: relative;
+            padding-bottom: 30px;
+        }
+        
+        .desktop-icon {
+            position: absolute;
+            width: 64px;
+            height: 80px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 2px;
+        }
+        
+        .desktop-icon:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .desktop-icon.selected {
+            background: rgba(0,0,139,0.7);
+            border: 1px dotted white;
+        }
+        
+        .icon-image {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 5px;
+            background: #c0c0c0;
+            border: 1px solid #808080;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        
+        .icon-label {
+            font-size: 11px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
+        }
+        
+        .window {
+            background: #c0c0c0;
+            border: 2px outset #c0c0c0;
+            position: absolute;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            min-width: 300px;
+            z-index: 10;
+        }
+        
+        .window.active {
+            z-index: 100;
+        }
+        
+        .window.minimized {
+            display: none;
+        }
+        
+        .title-bar {
+            background: linear-gradient(90deg, #000080, #0000ff);
+            color: white;
+            padding: 4px 8px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            cursor: move;
+        }
+        
+        .window.active .title-bar {
+            background: linear-gradient(90deg, #000080, #0000ff);
+        }
+        
+        .window:not(.active) .title-bar {
+            background: linear-gradient(90deg, #808080, #a0a0a0);
+        }
+        
+        .window-controls {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .control-btn {
+            width: 16px;
+            height: 14px;
+            background: #c0c0c0;
+            border: 1px outset #c0c0c0;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .control-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .control-btn:active {
+            border: 1px inset #c0c0c0;
+        }
+        
+        .window-content {
+            padding: 15px;
+            background: #c0c0c0;
+        }
+        
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: #c0c0c0;
+            border-top: 1px solid #dfdfdf;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            z-index: 1000;
+        }
+        
+        .start-button {
+            background: #c0c0c0;
+            border: 1px outset #c0c0c0;
+            padding: 4px 8px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+        }
+        
+        .start-button:hover {
+            background: #e0e0e0;
+        }
+        
+        .start-button:active {
+            border: 1px inset #c0c0c0;
+        }
+        
+        .start-button.active {
+            border: 1px inset #c0c0c0;
+            background: #a0a0a0;
+        }
+        
+        .taskbar-windows {
+            display: flex;
+            gap: 2px;
+            margin-left: 10px;
+            flex: 1;
+        }
+        
+        .taskbar-item {
+            background: #c0c0c0;
+            border: 1px outset #c0c0c0;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            max-width: 150px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .taskbar-item.active {
+            border: 1px inset #c0c0c0;
+            background: #a0a0a0;
+        }
+        
+        .taskbar-item:hover:not(.active) {
+            background: #e0e0e0;
+        }
+        
+        .clock {
+            margin-left: auto;
+            padding: 4px 8px;
+            border: 1px inset #c0c0c0;
+            font-size: 11px;
+            background: #ffffff;
+        }
+        
+        .start-menu {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            width: 200px;
+            background: #c0c0c0;
+            border: 2px outset #c0c0c0;
+            display: none;
+            z-index: 2000;
+        }
+        
+        .start-menu.show {
+            display: block;
+        }
+        
+        .start-menu-item {
+            padding: 8px 12px;
+            font-size: 11px;
+            cursor: pointer;
+            border-bottom: 1px solid #808080;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .start-menu-item:hover {
+            background: #000080;
+            color: white;
+        }
+        
+        .retro-button {
+            background: #c0c0c0;
+            border: 2px outset #c0c0c0;
+            padding: 8px 16px;
+            margin: 5px;
+            font-family: inherit;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .retro-button:hover {
+            background: #e0e0e0;
+        }
+        
+        .retro-button:active {
+            border: 2px inset #c0c0c0;
+        }
+        
+        .calculator {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            margin-top: 10px;
+        }
+        
+        .calc-display {
+            grid-column: 1 / -1;
+            background: white;
+            border: 1px inset #c0c0c0;
+            padding: 5px;
+            text-align: right;
+            font-family: monospace;
+            margin-bottom: 5px;
+        }
+        
+        .calc-btn {
+            background: #c0c0c0;
+            border: 1px outset #c0c0c0;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .calc-btn:active {
+            border: 1px inset #c0c0c0;
+        }
+        
+        .paint-canvas {
+            border: 1px inset #c0c0c0;
+            background: white;
+            cursor: crosshair;
+        }
+        
+        .paint-tools {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .color-picker {
+            width: 30px;
+            height: 20px;
+            border: 1px solid #000;
+            cursor: pointer;
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .rainbow-text {
+            animation: rainbow 3s linear infinite;
+            font-weight: bold;
+        }
+        
+        @keyframes rainbow {
+            0% { color: #ff0000; }
+            16% { color: #ff8000; }
+            33% { color: #ffff00; }
+            50% { color: #00ff00; }
+            66% { color: #00ffff; }
+            83% { color: #8000ff; }
+            100% { color: #ff0000; }
+        }
+        
+        .visitor-counter {
+            background: #000;
+            color: #00ff00;
+            padding: 5px;
+            font-family: monospace;
+            border: 1px inset #c0c0c0;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        
+        .notepad-textarea {
+            width: 100%;
+            height: 200px;
+            background: white;
+            border: 1px inset #c0c0c0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 5px;
+            resize: none;
+        }
+        
+        .menu-bar {
+            background: #c0c0c0;
+            border-bottom: 1px solid #808080;
+            padding: 2px;
+            font-size: 11px;
+        }
+        
+        .menu-item {
+            display: inline-block;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+        
+        .menu-item:hover {
+            background: #000080;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="desktop" onclick="clearSelection(event)">
+        <!-- Desktop Icons -->
+        <div class="desktop-icon" style="top: 20px; left: 20px;" ondblclick="openApp('mycomputer')" onclick="selectIcon(this, event)">
+            <div class="icon-image">💻</div>
+            <div class="icon-label">My Computer</div>
+        </div>
+        
+        <div class="desktop-icon" style="top: 120px; left: 20px;" ondblclick="openApp('calculator')" onclick="selectIcon(this, event)">
+            <div class="icon-image">🧮</div>
+            <div class="icon-label">Calculator</div>
+        </div>
+        
+        <div class="desktop-icon" style="top: 220px; left: 20px;" ondblclick="openApp('paint')" onclick="selectIcon(this, event)">
+            <div class="icon-image">🎨</div>
+            <div class="icon-label">Paint</div>
+        </div>
+        
+        <div class="desktop-icon" style="top: 320px; left: 20px;" ondblclick="openApp('notepad')" onclick="selectIcon(this, event)">
+            <div class="icon-image">📝</div>
+            <div class="icon-label">Notepad</div>
+        </div>
+        
+        <div class="desktop-icon" style="top: 420px; left: 20px;" ondblclick="openApp('minesweeper')" onclick="selectIcon(this, event)">
+            <div class="icon-image">💣</div>
+            <div class="icon-label">Minesweeper</div>
+        </div>
+        
+        <div class="desktop-icon" style="top: 20px; left: 100px;" ondblclick="openApp('recyclebin')" onclick="selectIcon(this, event)">
+            <div class="icon-image">🗑️</div>
+            <div class="icon-label">Recycle Bin</div>
+        </div>
+    </div>
+    
+    <!-- Start Menu -->
+    <div class="start-menu" id="startMenu">
+        <div class="start-menu-item" onclick="openApp('mycomputer')">💻 My Computer</div>
+        <div class="start-menu-item" onclick="openApp('calculator')">🧮 Calculator</div>
+        <div class="start-menu-item" onclick="openApp('paint')">🎨 Paint</div>
+        <div class="start-menu-item" onclick="openApp('notepad')">📝 Notepad</div>
+        <div class="start-menu-item" onclick="openApp('minesweeper')">💣 Minesweeper</div>
+        <div class="start-menu-item" onclick="openApp('about')">❓ About Windows 96</div>
+        <div class="start-menu-item" onclick="shutdown()">🔌 Shut Down</div>
+    </div>
+    
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <button class="start-button" id="startButton" onclick="toggleStartMenu()">
+            🪟 Start
+        </button>
+        <div class="taskbar-windows" id="taskbarWindows"></div>
+        <div class="clock" id="clock">12:00 PM</div>
+    </div>
+    
+    <script>
+        let windowCounter = 0;
+        let activeWindow = null;
+        let draggedElement = null;
+        let dragOffset = { x: 0, y: 0 };
+        let startMenuOpen = false;
+        
+        // Window management
+        const windows = new Map();
+        
+        class RetroWindow {
+            constructor(title, content, width = 400, height = 300) {
+                this.id = `window_${++windowCounter}`;
+                this.title = title;
+                this.width = width;
+                this.height = height;
+                this.minimized = false;
+                this.element = this.createElement();
+                this.content = content;
+                
+                document.querySelector('.desktop').appendChild(this.element);
+                this.position(50 + (windowCounter * 30), 50 + (windowCounter * 30));
+                this.addToTaskbar();
+                this.focus();
+                
+                windows.set(this.id, this);
+            }
+            
+            createElement() {
+                const windowEl = document.createElement('div');
+                windowEl.className = 'window';
+                windowEl.innerHTML = `
+                    <div class="title-bar">
+                        <span>${this.title}</span>
+                        <div class="window-controls">
+                            <div class="control-btn" onclick="minimizeWindow('${this.id}')">_</div>
+                            <div class="control-btn" onclick="maximizeWindow('${this.id}')">□</div>
+                            <div class="control-btn" onclick="closeWindow('${this.id}')">×</div>
+                        </div>
+                    </div>
+                    <div class="window-content">${this.content}</div>
+                `;
+                
+                windowEl.style.width = this.width + 'px';
+                windowEl.style.height = this.height + 'px';
+                
+                // Add drag functionality
+                const titleBar = windowEl.querySelector('.title-bar');
+                titleBar.addEventListener('mousedown', (e) => this.startDrag(e));
+                
+                // Add focus on click
+                windowEl.addEventListener('mousedown', () => this.focus());
+                
+                return windowEl;
+            }
+            
+            startDrag(e) {
+                if (e.target.classList.contains('control-btn')) return;
+                
+                draggedElement = this.element;
+                const rect = this.element.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                
+                this.focus();
+            }
+            
+            position(x, y) {
+                this.element.style.left = Math.max(0, Math.min(x, window.innerWidth - this.width)) + 'px';
+                this.element.style.top = Math.max(0, Math.min(y, window.innerHeight - this.height - 30)) + 'px';
+            }
+            
+            focus() {
+                // Remove active class from all windows
+                document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+                document.querySelectorAll('.taskbar-item').forEach(t => t.classList.remove('active'));
+                
+                // Add active class to this window
+                this.element.classList.add('active');
+                document.querySelector(`[data-window-id="${this.id}"]`)?.classList.add('active');
+                activeWindow = this;
+            }
+            
+            minimize() {
+                this.minimized = true;
+                this.element.classList.add('minimized');
+                document.querySelector(`[data-window-id="${this.id}"]`).classList.remove('active');
+            }
+            
+            restore() {
+                this.minimized = false;
+                this.element.classList.remove('minimized');
+                this.focus();
+            }
+            
+            close() {
+                this.element.remove();
+                document.querySelector(`[data-window-id="${this.id}"]`)?.remove();
+                windows.delete(this.id);
+            }
+            
+            addToTaskbar() {
+                const taskbarItem = document.createElement('div');
+                taskbarItem.className = 'taskbar-item';
+                taskbarItem.setAttribute('data-window-id', this.id);
+                taskbarItem.textContent = this.title;
+                taskbarItem.onclick = () => {
+                    if (this.minimized) {
+                        this.restore();
+                    } else {
+                        this.focus();
+                    }
+                };
+                
+                document.getElementById('taskbarWindows').appendChild(taskbarItem);
+            }
+        }
+        
+        // Mouse event handlers for dragging
+        function handleMouseMove(e) {
+            if (draggedElement) {
+                const x = e.clientX - dragOffset.x;
+                const y = e.clientY - dragOffset.y;
+                draggedElement.style.left = Math.max(0, Math.min(x, window.innerWidth - draggedElement.offsetWidth)) + 'px';
+                draggedElement.style.top = Math.max(0, Math.min(y, window.innerHeight - draggedElement.offsetHeight - 30)) + 'px';
+            }
+        }
+        
+        function handleMouseUp() {
+            draggedElement = null;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        }
+        
+        // Window control functions
+        function minimizeWindow(id) {
+            windows.get(id)?.minimize();
+        }
+        
+        function maximizeWindow(id) {
+            const window = windows.get(id);
+            if (window) {
+                // Simple maximize - just resize to fit screen
+                window.element.style.left = '0px';
+                window.element.style.top = '0px';
+                window.element.style.width = '100%';
+                window.element.style.height = 'calc(100vh - 30px)';
+            }
+        }
+        
+        function closeWindow(id) {
+            windows.get(id)?.close();
+        }
+        
+        // Desktop icon selection
+        function selectIcon(icon, e) {
+            e.stopPropagation();
+            clearSelection();
+            icon.classList.add('selected');
+        }
+        
+        function clearSelection(e) {
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.classList.remove('selected');
+            });
+        }
+        
+        // Start menu
+        function toggleStartMenu() {
+            const startMenu = document.getElementById('startMenu');
+            const startButton = document.getElementById('startButton');
+            
+            startMenuOpen = !startMenuOpen;
+            startMenu.classList.toggle('show', startMenuOpen);
+            startButton.classList.toggle('active', startMenuOpen);
+        }
+        
+        // Close start menu when clicking elsewhere
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.start-button') && !e.target.closest('.start-menu')) {
+                document.getElementById('startMenu').classList.remove('show');
+                document.getElementById('startButton').classList.remove('active');
+                startMenuOpen = false;
+            }
+        });
+        
+        // Application launcher
+        function openApp(appName) {
+            toggleStartMenu(); // Close start menu
+            
+            switch(appName) {
+                case 'mycomputer':
+                    new RetroWindow('My Computer', `
+                        <h3>💻 My Computer</h3>
+                        <hr style="margin: 10px 0;">
+                        <div style="margin: 10px 0;">
+                            <div style="margin: 5px 0;">💾 3½ Floppy (A:)</div>
+                            <div style="margin: 5px 0;">💿 CD-ROM (D:)</div>
+                            <div style="margin: 5px 0;">🖥️ Hard Drive (C:)</div>
+                            <div style="margin: 5px 0;">🖨️ Control Panel</div>
+                        </div>
+                        <div class="visitor-counter">Free Space: 1.44 MB</div>
+                    `, 350, 250);
+                    break;
+                    
+                case 'calculator':
+                    new RetroWindow('Calculator', `
+                        <div class="calc-display" id="calcDisplay">0</div>
+                        <div class="calculator">
+                            <div class="calc-btn" onclick="clearCalc()">C</div>
+                            <div class="calc-btn" onclick="calcInput('/')">/</div>
+                            <div class="calc-btn" onclick="calcInput('*')">*</div>
+                            <div class="calc-btn" onclick="calcBackspace()">←</div>
+                            <div class="calc-btn" onclick="calcInput('7')">7</div>
+                            <div class="calc-btn" onclick="calcInput('8')">8</div>
+                            <div class="calc-btn" onclick="calcInput('9')">9</div>
+                            <div class="calc-btn" onclick="calcInput('-')">-</div>
+                            <div class="calc-btn" onclick="calcInput('4')">4</div>
+                            <div class="calc-btn" onclick="calcInput('5')">5</div>
+                            <div class="calc-btn" onclick="calcInput('6')">6</div>
+                            <div class="calc-btn" onclick="calcInput('+')">+</div>
+                            <div class="calc-btn" onclick="calcInput('1')">1</div>
+                            <div class="calc-btn" onclick="calcInput('2')">2</div>
+                            <div class="calc-btn" onclick="calcInput('3')">3</div>
+                            <div class="calc-btn" onclick="calcEquals()" style="grid-row: span 2;">=</div>
+                            <div class="calc-btn" onclick="calcInput('0')" style="grid-column: span 2;">0</div>
+                            <div class="calc-btn" onclick="calcInput('.')">.</div>
+                        </div>
+                    `, 220, 280);
+                    break;
+                    
+                case 'paint':
+                    new RetroWindow('Paint', `
+                        <div class="menu-bar">
+                            <span class="menu-item">File</span>
+                            <span class="menu-item">Edit</span>
+                            <span class="menu-item">View</span>
+                            <span class="menu-item">Image</span>
+                            <span class="menu-item">Colors</span>
+                            <span class="menu-item">Help</span>
+                        </div>
+                        <div class="paint-tools">
+                            <button class="retro-button" onclick="setPaintTool('pen')">🖊️</button>
+                            <button class="retro-button" onclick="setPaintTool('brush')">🖌️</button>
+                            <button class="retro-button" onclick="setPaintTool('eraser')">🧽</button>
+                            <div class="color-picker" style="background: red;" onclick="setPaintColor('red')"></div>
+                            <div class="color-picker" style="background: blue;" onclick="setPaintColor('blue')"></div>
+                            <div class="color-picker" style="background: green;" onclick="setPaintColor('green')"></div>
+                            <div class="color-picker" style="background: black;" onclick="setPaintColor('black')"></div>
+                        </div>
+                        <canvas class="paint-canvas" width="350" height="200" id="paintCanvas"></canvas>
+                    `, 400, 320);
+                    setupPaint();
+                    break;
+                    
+                case 'notepad':
+                    new RetroWindow('Notepad', `
+                        <div class="menu-bar">
+                            <span class="menu-item">File</span>
+                            <span class="menu-item">Edit</span>
+                            <span class="menu-item">Search</span>
+                            <span class="menu-item">Help</span>
+                        </div>
+                        <textarea class="notepad-textarea" placeholder="Start typing your document here...">Welcome to Notepad!
+
+This is a fully functional text editor from the year 1996.
+
+Try typing something here and watch the magic happen!
+
+Features:
+- Text editing
+- Basic formatting
+- All the nostalgia you can handle
+
+Enjoy your trip back to the 90s! 🎉</textarea>
+                    `, 450, 300);
+                    break;
+                    
+                case 'minesweeper':
+                    new RetroWindow('Minesweeper', `
+                        <div style="text-align: center; margin-bottom: 10px;">
+                            <div style="background: #c0c0c0; border: 1px inset #c0c0c0; padding: 5px; display: inline-block;">
+                                💣 <span id="mineCount">10</span> | 😊 | ⏰ <span id="gameTime">000</span>
+                            </div>
+                        </div>
+                        <div id="mineField" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 1px; background: #808080; padding: 3px;">
+                            <!-- Minefield will be generated here -->
+                        </div>
+                        <div style="margin-top: 10px; text-align: center;">
+                            <button class="retro-button" onclick="newMinesweeperGame()">New Game</button>
+                        </div>
+                    `, 280, 320);
+                    initMinesweeper();
+                    break;
+                    
+                case 'about':
+                    new RetroWindow('About Windows 96', `
+                        <div style="text-align: center;">
+                            <h2 class="rainbow-text">Windows 96</h2>
+                            <div style="margin: 15px 0;">
+                                <div style="font-size: 48px;">🪟</div>
+                            </div>
+                            <p><strong>Version:</strong> 4.00.950B</p>
+                            <p><strong>Build:</strong> Totally Radical Edition</p>
+                            <hr style="margin: 15px 0;">
+                            <p>This computer is registered to:</p>
+                            <p><strong>Awesome 90s Kid</strong></p>
+                            <p>Organization: <strong>Time Travelers Inc.</strong></p>
+                            <hr style="margin: 15px 0;">
+                            <div class="visitor-counter">MEMORY: 64 MB RAM</div>
+                            <div class="visitor-counter">DISK: 2.1 GB FREE</div>
+                            <div style="margin-top: 15px;">
+                                <button class="retro-button" onclick="alert('System Info copied to clipboard! (Just kidding, this is 1996)')">System Info</button>
+                                <button class="retro-button" onclick="closeWindow(this.closest('.window').querySelector('.title-bar span').textContent.split(' ').pop())">OK</button>
+                            </div>
+                        </div>
+                    `, 320, 400);
+                    break;
+                    
+                case 'recyclebin':
+                    new RetroWindow('Recycle Bin', `
+                        <h3>🗑️ Recycle Bin</h3>
+                        <hr style="margin: 10px 0;">
+                        <div style="text-align: center; margin: 20px 0;">
+                            <p>The Recycle Bin is empty.</p>
+                            <br>
+                            <p style="font-style: italic;">💡 Tip: Drag files here to delete them!</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <button class="retro-button" onclick="alert('Nothing to empty!')">Empty Recycle Bin</button>
+                        </div>
+                    `, 300, 200);
+                    break;
+            }
+        }
+        
+        // Calculator functionality
+        let calcExpression = '';
+        let calcDisplay = '0';
+        
+        function calcInput(value) {
+            if (calcDisplay === '0' && !isNaN(value)) {
+                calcDisplay = value;
+            } else {
+                calcDisplay += value;
+            }
+            calcExpression += value;
+            document.getElementById('calcDisplay').textContent = calcDisplay;
+        }
+        
+        function calcEquals() {
+            try {
+                const result = eval(calcExpression);
+                calcDisplay = result.toString();
+                calcExpression = result.toString();
+                document.getElementById('calcDisplay').textContent = calcDisplay;
+            } catch {
+                calcDisplay = 'Error';
+                calcExpression = '';
+                document.getElementById('calcDisplay').textContent = calcDisplay;
+            }
+        }
+        
+        function clearCalc() {
+            calcDisplay = '0';
+            calcExpression = '';
+            document.getElementById('calcDisplay').textContent = calcDisplay;
+        }
+        
+        function calcBackspace() {
+            if (calcDisplay.length > 1) {
+                calcDisplay = calcDisplay.slice(0, -1);
+                calcExpression = calcExpression.slice(0, -1);
+            } else {
+                calcDisplay = '0';
+                calcExpression = '';
+            }
+            document.getElementById('calcDisplay').textContent = calcDisplay;
+        }
+        
+        // Paint functionality
+        let paintColor = 'black';
+        let paintTool = 'pen';
+        let isDrawing = false;
+        
+        function setupPaint() {
+            setTimeout(() => {
+                const canvas = document.getElementById('paintCanvas');
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                canvas.addEventListener('mousedown', startDrawing);
+                canvas.addEventListener('mousemove', draw);
+                canvas.addEventListener('mouseup', stopDrawing);
+                canvas.addEventListener('mouseout', stopDrawing);
+            }, 100);
+        }
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const canvas = e.target;
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            ctx.lineWidth = paintTool === 'brush' ? 8 : paintTool === 'eraser' ? 10 : 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = paintTool === 'eraser' ? 'white' : paintColor;
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                const canvas = document.getElementById('paintCanvas');
+                if (canvas) {
+                    canvas.getContext('2d').beginPath();
+                }
+            }
+        }
+        
+        function setPaintColor(color) {
+            paintColor = color;
+        }
+        
+        function setPaintTool(tool) {
+            paintTool = tool;
+        }
+        
+        // Minesweeper
+        function initMinesweeper() {
+            setTimeout(() => {
+                newMinesweeperGame();
+            }, 100);
+        }
+        
+        function newMinesweeperGame() {
+            const field = document.getElementById('mineField');
+            if (!field) return;
+            
+            field.innerHTML = '';
+            
+            // Create 9x9 grid with 10 mines
+            for (let i = 0; i < 81; i++) {
+                const cell = document.createElement('div');
+                cell.style.width = '25px';
+                cell.style.height = '25px';
+                cell.style.background = '#c0c0c0';
+                cell.style.border = '1px outset #c0c0c0';
+                cell.style.cursor = 'pointer';
+                cell.style.display = 'flex';
+                cell.style.alignItems = 'center';
+                cell.style.justifyContent = 'center';
+                cell.style.fontSize = '12px';
+                cell.onclick = () => {
+                    if (Math.random() < 0.1) {
+                        cell.textContent = '💥';
+                        cell.style.background = 'red';
+                        alert('BOOM! Game Over!');
+                    } else {
+                        const num = Math.floor(Math.random() * 4);
+                        cell.textContent = num || '';
+                        cell.style.background = '#e0e0e0';
+                        cell.style.border = '1px inset #c0c0c0';
+                    }
+                };
+                field.appendChild(cell);
+            }
+        }
+        
+        // Shutdown function
+        function shutdown() {
+            if (confirm('Are you sure you want to shut down Windows 96?')) {
+                document.body.style.background = 'black';
+                document.body.innerHTML = '<div style="color: white; text-align: center; margin-top: 50vh; font-family: monospace;">It is now safe to turn off your computer.</div>';
+            }
+        }
+        
+        // Clock update
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            document.getElementById('clock').textContent = timeString;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+        
+        // Welcome window on startup
+        setTimeout(() => {
+            new RetroWindow('Welcome to Windows 96!', `
+                <div style="text-align: center;">
+                    <h2 class="rainbow-text">🎉 Welcome! 🎉</h2>
+                    <div class="blink" style="margin: 15px 0;">✨ You're now in Windows 96! ✨</div>
+                    <p>Try these amazing features:</p>
+                    <ul style="text-align: left; margin: 15px 0;">
+                        <li>🖱️ Drag windows around!</li>
+                        <li>📱 Double-click desktop icons</li>
+                        <li>🎨 Use the Paint app</li>
+                        <li>🧮 Try the Calculator</li>
+                        <li>💣 Play Minesweeper</li>
+                        <li>📝 Write in Notepad</li>
+                    </ul>
+                    <div class="visitor-counter">VISITOR #: 1337</div>
+                    <br>
+                    <button class="retro-button" onclick="closeWindow('${windowCounter}')">Let's Go!</button>
+                </div>
+            `, 350, 350);
+        }, 500);
+    </script>
+</body>
+</html>
